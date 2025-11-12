@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Poultry Management System</title>
+    
+    <!-- External Libraries via CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    
+    <style>
+        /* ========================================
+           CAPSTONE PROJECT: IoT-Based Smart Poultry Management System
+           
+           DESIGN REQUIREMENTS:
+           - Brown & White Palette (Professional Theme)
+           - Responsive Layout (Mobile/Tablet/Desktop)
+           - Accessible (ARIA, Keyboard Navigation)
+           - Modern UI with Cards, Shadows, Rounded Corners
+           
+           ISO 9126 - USABILITY: Professional design, clear visual hierarchy
+           ISO 9126 - PORTABILITY: Responsive CSS for all devices
+           ======================================== */
+        
+        :root {
+            --brown-dark: #4B2E2E;
+            --brown-medium: #6B4423;
+            --brown-light: #8B6F47;
+            --brown-accent: #A0826D;
+            --white: #FFFFFF;
+            --off-white: #FAF9F6;
+            --gray-light: #E5E5E5;
+            --gray-medium: #999999;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+            --info: #2196F3;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--off-white);
+            color: var(--brown-dark);
+            line-height: 1.6;
+        }
+        
+        /* Authentication Screen */
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--brown-dark) 0%, var(--brown-medium) 100%);
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+        }
+        
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .auth-logo h1 {
+            color: var(--brown-dark);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .auth-logo p {
+            color: var(--gray-medium);
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--brown-dark);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-light);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--brown-medium);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--brown-dark);
+            color: var(--white);
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            background: var(--brown-medium);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(75, 46, 46, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--white);
+            color: var(--brown-dark);
+            border: 2px solid var(--brown-dark);
+            width: 100%;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--off-white);
+        }
+        
+        .btn-google {
+            background: var(--white);
+            color: var(--brown-dark);
+            border: 2px solid var(--gray-light);
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .btn-google:hover {
+            border-color: var(--brown-medium);
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            color: var(--gray-medium);
+            position: relative;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: var(--gray-light);
+        }
+        
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--gray-medium);
+            font-size: 14px;
+        }
+        
+        .auth-toggle a {
+            color: var(--brown-dark);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Main Application Layout */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 260px;
+            background: var(--brown-dark);
+            color: var(--white);
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin-bottom: 8px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            transition: margin-left 0.3s;
+        }
+        
+        .header {
+            background: var(--white);
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-title h1 {
+            font-size: 24px;
+            color: var(--brown-dark);
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--brown-light);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .content-area {
+            padding: 30px;
+        }
+        
+        .page-section {
+            display: none;
+        }
+        
+        .page-section.active {
+            display: block;
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--brown-dark);
+            margin-bottom: 8px;
+        }
+        
+        .metric-label {
+            color: var(--gray-medium);
+            font-size: 14px;
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            margin: 20px 0;
+        }
+        
+        .gauge-bar {
+            width: 100%;
+            height: 30px;
+            background: var(--gray-light);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--info));
+            transition: width 0.5s ease;
+            border-radius: 15px;
+        }
+        
+        .gauge-label {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background: rgba(255, 152, 0, 0.1);
+            color: var(--warning);
+        }
+        
+        .status-danger {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--danger);
+        }
+        
+        .status-info {
+            background: rgba(33, 150, 243, 0.1);
+            color: var(--info);
+        }
+        
+        /* Feeding Schedule */
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: var(--off-white);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .schedule-time {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        
+        .schedule-amount {
+            color: var(--gray-medium);
+            font-size: 14px;
+        }
+        
+        .schedule-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--gray-light);
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--success);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: var(--white);
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        
+        .btn-info {
+            background: var(--info);
+            color: var(--white);
+        }
+        
+        /* Fowl Registry */
+        .fowl-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .fowl-card {
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.3s;
+        }
+        
+        .fowl-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .fowl-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: var(--gray-light);
+        }
+        
+        .fowl-info {
+            padding: 15px;
+        }
+        
+        .fowl-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--brown-dark);
+            margin-bottom: 8px;
+        }
+        
+        .fowl-detail {
+            font-size: 13px;
+            color: var(--gray-medium);
+            margin-bottom: 4px;
+        }
+        
+        .fowl-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        /* Notifications Panel */
+        .notifications-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .notification-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: var(--off-white);
+            border-left: 4px solid var(--info);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .notification-item.warning {
+            border-left-color: var(--warning);
+        }
+        
+        .notification-item.danger {
+            border-left-color: var(--danger);
+        }
+        
+        .notification-item.success {
+            border-left-color: var(--success);
+        }
+        
+        .notification-icon {
+            font-size: 24px;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            color: var(--brown-dark);
+            margin-bottom: 4px;
+        }
+        
+        .notification-message {
+            font-size: 14px;
+            color: var(--gray-medium);
+            margin-bottom: 4px;
+        }
+        
+        .notification-time {
+            font-size: 12px;
+            color: var(--gray-medium);
+        }
+        
+        /* Reports */
+        .report-filters {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .quick-filters {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .chart-container {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-medium);
+        }
+        
+        /* Alert Banner */
+        .alert-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-success {
+            background: var(--success);
+            color: var(--white);
+        }
+        
+        .alert-warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+        
+        .alert-danger {
+            background: var(--danger);
+            color: var(--white);
+        }
+        
+        .alert-info {
+            background: var(--info);
+            color: var(--white);
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid var(--gray-light);
+            border-top: 3px solid var(--brown-dark);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design - ISO 9126 PORTABILITY */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+        }
+        
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-20 {
+            margin-top: 20px;
+        }
+        
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+        
+        /* Print Styles for PDF Export */
+        @media print {
+            .sidebar,
+            .header,
+            .no-print {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            body {
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+    ========================================
+    CAPSTONE PROJECT DOCUMENTATION
+    ========================================
+    
+    PROJECT: IoT-Based Smart Poultry Management System
+    
+    WATERFALL SDLC PHASES:
+    1. REQUIREMENTS: Defined in manuscript - monitoring, control, notifications, reporting
+    2. DESIGN: IPO model, UI/UX mockups, database schema, Firebase architecture
+    3. IMPLEMENTATION: This single-file application with modular JavaScript
+    4. TESTING: Inline test cases for each ISO 9126 criterion
+    5. DEPLOYMENT: Firebase Hosting ready
+    6. MAINTENANCE: Simulation mode for demo, extensible architecture
+    
+    IPO (Input-Process-Output) MODEL MAPPING:
+    
+    AUTHENTICATION FLOW:
+    - Input: Email/password, Google OAuth, role selection
+    - Process: Firebase Auth verification, Firestore user document creation
+    - Output: Authenticated session, role-based dashboard access
+    
+    TEMPERATURE MONITORING:
+    - Input: Temperature sensor data (Firestore temperatureLogs)
+    - Process: Threshold checks (>30°C fan ON, <20°C light ON)
+    - Output: Actuator control, push notifications, dashboard updates
+    
+    WATER LEVEL MONITORING:
+    - Input: Water level sensor (percentage)
+    - Process: Threshold logic (LOW ≤20%, HIGH ≥90%)
+    - Output: Notifications, visual gauge, pump control
+    
+    FEEDING CONTROL:
+    - Input: Schedule (08:00, 12:00, 16:00), manual triggers, amount settings
+    - Process: Time-based automation, feed dispensing logic
+    - Output: Feed logs, notifications, actuator activation
+    
+    FOWL REGISTRATION:
+    - Input: Fowl details (name, breed, age, photo)
+    - Process: Data validation, photo upload to Storage, Firestore writes
+    - Output: Registered fowl list, statistics
+    
+    REPORT GENERATION:
+    - Input: Date range filters, data from Firestore collections
+    - Process: Chart.js visualization, data aggregation, PDF generation
+    - Output: Interactive charts, printable PDF report
+    
+    ISO 9126 QUALITY ATTRIBUTES:
+    
+    1. FUNCTIONALITY: All required features implemented (auth, monitoring, control, reports)
+       - Test: Verify all user stories complete
+    
+    2. RELIABILITY: Error handling, Firebase offline persistence, graceful degradation
+       - Test: Disconnect network, verify offline behavior
+    
+    3. USABILITY: Intuitive UI, accessible design, clear feedback, help modals
+       - Test: Complete tasks without documentation, check ARIA attributes
+    
+    4. EFFICIENCY: Real-time Firestore listeners, optimized queries, lazy loading
+       - Test: Monitor performance in browser DevTools
+    
+    5. MAINTAINABILITY: Modular code, comprehensive comments, clear naming
+       - Test: Add new feature, measure time and effort
+    
+    6. PORTABILITY: Responsive design, cross-browser compatibility, mobile-first
+       - Test: Verify on Chrome, Firefox, Safari, mobile devices
+    
+    FIREBASE SETUP INSTRUCTIONS:
+    1. Enable Authentication providers: Email/Password and Google
+    2. Create Firestore database with collections: users, chickens, feedingSchedules, 
+       feedingLogs, waterLogs, temperatureLogs, notifications, systemStatus
+    3. Enable Firebase Storage for fowl photos
+    4. Deploy Firestore Security Rules (see comments in code)
+    5. Optional: Enable Firebase Cloud Messaging for push notifications
+    
+    SIMULATION MODE:
+    Toggle "Simulation Mode" in header to generate realistic sensor data without hardware.
+    Automatically seeds demo data including temperature cycles, water level changes, and feeding events.
+    
+    DEMO CREDENTIALS:
+    After signup, any email/password works. For testing, use:
+    - Email: demo@poultry.com
+    - Password: Demo123!
+    - Role: Admin (to see all features)
+    
+    ========================================
+    -->
+    
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <h1>🐔 Smart Poultry</h1>
+                <p>IoT-Based Management System</p>
+            </div>
+            
+            <div id="loginForm">
+                <form id="loginFormElement" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" onclick="handleLogin()">Sign In</button>
+                </form>
+                
+                <div class="divider">OR</div>
+                
+                <button class="btn btn-google" onclick="handleGoogleLogin()">
+                    <span>🔐</span> Continue with Google
+                </button>
+                
+                <div class="auth-toggle">
+                    Don't have an account? <a href="#" onclick="showSignup()">Sign up</a>
+                </div>
+            </div>
+            
+            <div id="signupForm" class="hidden">
+                <form id="signupFormElement" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="signupName">Full Name</label>
+                        <input type="text" id="signupName" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail">Email Address</label>
+                        <input type="email" id="signupEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" placeholder="Create a password (min 6 chars)" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupRole">Role</label>
+                        <select id="signupRole" required>
+                            <option value="">Select your role</option>
+                            <option value="farmer">Farmer</option>
