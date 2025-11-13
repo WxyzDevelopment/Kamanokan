@@ -9,8 +9,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1719,7 +1717,10 @@
                     </div>
                     <div class="form-group">
                         <label for="signupPassword">Password</label>
-                        <input type="password" id="signupPassword" placeholder="Minimum 6 characters" required>
+                        <input type="password" id="signupPassword" placeholder="Min 8 chars (A-z, 0-9, !@#$)" required>
+                        <small style="display: block; margin-top: 6px; color: var(--gray-600); font-size: 12px;">
+                            Must include: uppercase, lowercase, number, and special character
+                        </small>
                     </div>
                     <button type="submit" class="btn btn-primary" onclick="handleSignup()">
                         Create Account
@@ -1786,16 +1787,6 @@
                     </a>
                 </li>
             </ul>
-            
-            <div class="sidebar-footer">
-                <div class="simulation-toggle">
-                    <span>Simulation Mode</span>
-                    <label class="switch">
-                        <input type="checkbox" id="simulationToggle" onchange="toggleSimulation()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
         </aside>
         
         <!-- Mobile Bottom Navigation -->
@@ -2120,18 +2111,6 @@
                             Status: <strong id="notifPermStatus">Not enabled</strong>
                         </p>
                     </div>
-                    
-                    <div class="schedule-section">
-                        <div class="section-header">
-                            <h3 class="section-title">Demo Data</h3>
-                        </div>
-                        <p style="margin-bottom: 16px; color: var(--gray-700);">
-                            Populate the system with sample sensor data and fowl records for testing
-                        </p>
-                        <button class="btn btn-secondary" onclick="seedDemoData()">
-                            Seed Demo Data
-                        </button>
-                    </div>
                 </section>
             </div>
         </main>
@@ -2175,7 +2154,6 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const storage = firebase.storage();
         
         // Enable offline persistence
         db.enablePersistence().catch((err) => {
@@ -2233,8 +2211,33 @@
             const password = document.getElementById('signupPassword').value;
             const name = document.getElementById('signupName').value;
             
-            if (password.length < 6) {
-                showAlert('Password must be at least 6 characters', 'danger');
+            // Enhanced password validation
+            if (password.length < 8) {
+                showAlert('Password must be at least 8 characters long', 'danger');
+                return;
+            }
+            
+            // Check for uppercase
+            if (!/[A-Z]/.test(password)) {
+                showAlert('Password must contain at least one uppercase letter', 'danger');
+                return;
+            }
+            
+            // Check for lowercase
+            if (!/[a-z]/.test(password)) {
+                showAlert('Password must contain at least one lowercase letter', 'danger');
+                return;
+            }
+            
+            // Check for number
+            if (!/[0-9]/.test(password)) {
+                showAlert('Password must contain at least one number', 'danger');
+                return;
+            }
+            
+            // Check for special character
+            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+                showAlert('Password must contain at least one special character (!@#$%^&*)', 'danger');
                 return;
             }
             
@@ -2435,8 +2438,11 @@
             const fowlUnsubscribe = db.collection('chickens')
                 .where('userId', '==', currentUser.uid)
                 .onSnapshot((snapshot) => {
-                    document.getElementById('fowlCount').textContent = snapshot.size;
-                    document.getElementById('fowlListCount').textContent = snapshot.size;
+                    const count = snapshot.size;
+                    document.getElementById('fowlCount').textContent = count;
+                    document.getElementById('fowlListCount').textContent = count;
+                    // Reload fowl data when changes detected
+                    loadFowlData();
                 });
             unsubscribers.push(fowlUnsubscribe);
         }
@@ -2736,9 +2742,13 @@
             
             if (simulationMode) {
                 startSimulation();
+                document.getElementById('simStatus').textContent = '(Enabled)';
+                document.getElementById('simStatus').style.color = 'var(--success)';
                 showAlert('Simulation mode enabled', 'info');
             } else {
                 stopSimulation();
+                document.getElementById('simStatus').textContent = '(Disabled)';
+                document.getElementById('simStatus').style.color = 'var(--gray-600)';
                 showAlert('Simulation mode disabled', 'info');
             }
         }
@@ -2783,94 +2793,138 @@
             const tag = document.getElementById('fowlTag').value;
             const photoFile = document.getElementById('fowlPhoto').files[0];
             
-            let photoUrl = null;
-            
-            if (photoFile) {
-                const storageRef = storage.ref(`fowl/${currentUser.uid}/${Date.now()}_${photoFile.name}`);
-                const uploadTask = await storageRef.put(photoFile);
-                photoUrl = await uploadTask.ref.getDownloadURL();
-            }
-            
-            await db.collection('chickens').add({
-                userId: currentUser.uid,
-                name: name,
-                breed: breed,
-                age: age,
-                tagId: tag,
-                photoUrl: photoUrl,
-                registeredAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            document.getElementById('fowlName').value = '';
-            document.getElementById('fowlBreed').value = '';
-            document.getElementById('fowlAge').value = '';
-            document.getElementById('fowlTag').value = '';
-            document.getElementById('fowlPhoto').value = '';
-            
-            showAlert('Fowl registered successfully!', 'success');
-            await loadFowlData();
-        }
-        
-        async function loadFowlData() {
-            const fowlSnapshot = await db.collection('chickens')
-                .where('userId', '==', currentUser.uid)
-                .orderBy('registeredAt', 'desc')
-                .get();
-            
-            if (fowlSnapshot.empty) {
-                document.getElementById('fowlGrid').innerHTML = `
-                    <div class="empty-state" style="grid-column: 1/-1;">
-                        <div class="empty-icon">🐔</div>
-                        <div class="empty-title">No fowl registered yet</div>
-                        <div class="empty-description">Start by registering your first chicken</div>
-                    </div>
-                `;
+            // Validate required fields
+            if (!name || !breed || !age) {
+                showAlert('Please fill in all required fields', 'warning');
                 return;
             }
             
-            const fowlHtml = fowlSnapshot.docs.map(doc => {
-                const data = doc.data();
-                const photoUrl = data.photoUrl || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Crect fill="%23E5E5E5" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-size="60" fill="%23999">🐔%3C/text%3E%3C/svg%3E';
-                
-                return `
-                    <div class="fowl-card">
-                        <div class="fowl-image-wrapper">
-                            <img src="${photoUrl}" alt="${data.name}" class="fowl-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 200 200\\'%3E%3Crect fill=\\'%23E5E5E5\\' width=\\'200\\' height=\\'200\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'60\\' fill=\\'%23999\\'%3E🐔%3C/text%3E%3C/svg%3E'">
-                            <div class="fowl-badge">${data.age} weeks</div>
-                        </div>
-                        <div class="fowl-content">
-                            <h4 class="fowl-name">${data.name}</h4>
-                            <div class="fowl-meta">
-                                <div class="fowl-meta-item">
-                                    <span class="fowl-meta-label">Breed:</span> ${data.breed}
-                                </div>
-                                ${data.tagId ? `<div class="fowl-meta-item"><span class="fowl-meta-label">Tag:</span> ${data.tagId}</div>` : ''}
-                            </div>
-                            <div class="fowl-actions">
-                                <button class="btn-small btn-danger" onclick="deleteFowl('${doc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            let photoBase64 = null;
             
-            document.getElementById('fowlGrid').innerHTML = fowlHtml;
+            // Convert image to Base64 if provided
+            if (photoFile) {
+                // Validate file size (max 1MB for Base64 storage)
+                if (photoFile.size > 1024 * 1024) {
+                    showAlert('Image too large! Please select an image under 1MB', 'warning');
+                    return;
+                }
+                
+                try {
+                    photoBase64 = await convertImageToBase64(photoFile);
+                } catch (error) {
+                    showAlert('Failed to process image', 'danger');
+                    console.error('Image conversion error:', error);
+                    return;
+                }
+            }
+            
+            try {
+                // Add to Firestore
+                await db.collection('chickens').add({
+                    userId: currentUser.uid,
+                    name: name,
+                    breed: breed,
+                    age: age,
+                    tagId: tag || '',
+                    photoBase64: photoBase64,
+                    registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Clear form
+                document.getElementById('fowlName').value = '';
+                document.getElementById('fowlBreed').value = '';
+                document.getElementById('fowlAge').value = '';
+                document.getElementById('fowlTag').value = '';
+                document.getElementById('fowlPhoto').value = '';
+                
+                showAlert('Fowl registered successfully!', 'success');
+                
+                // Force reload fowl data after a short delay to ensure Firestore has processed
+                setTimeout(async () => {
+                    await loadFowlData();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert('Failed to register fowl: ' + error.message, 'danger');
+            }
+        }
+        
+        // Convert image file to Base64 string
+        function convertImageToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = () => {
+                    resolve(reader.result);
+                };
+                
+                reader.onerror = (error) => {
+                    reject(error);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        async function loadFowlData() {
+            try {
+                const fowlSnapshot = await db.collection('chickens')
+                    .where('userId', '==', currentUser.uid)
+                    .orderBy('registeredAt', 'desc')
+                    .get();
+                
+                console.log('Loading fowl data, count:', fowlSnapshot.size); // Debug log
+                
+                if (fowlSnapshot.empty) {
+                    document.getElementById('fowlGrid').innerHTML = `
+                        <div class="empty-state" style="grid-column: 1/-1;">
+                            <div class="empty-icon">🐔</div>
+                            <div class="empty-title">No fowl registered yet</div>
+                            <div class="empty-description">Start by registering your first chicken</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const fowlHtml = fowlSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Use Base64 image if available, otherwise use placeholder
+                    const photoSrc = data.photoBase64 || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Crect fill="%23E5E5E5" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-size="60" fill="%23999">🐔%3C/text%3E%3C/svg%3E';
+                    
+                    return `
+                        <div class="fowl-card">
+                            <div class="fowl-image-wrapper">
+                                <img src="${photoSrc}" alt="${data.name}" class="fowl-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 200 200\\'%3E%3Crect fill=\\'%23E5E5E5\\' width=\\'200\\' height=\\'200\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'60\\' fill=\\'%23999\\'%3E🐔%3C/text%3E%3C/svg%3E'">
+                                <div class="fowl-badge">${data.age} weeks</div>
+                            </div>
+                            <div class="fowl-content">
+                                <h4 class="fowl-name">${data.name}</h4>
+                                <div class="fowl-meta">
+                                    <div class="fowl-meta-item">
+                                        <span class="fowl-meta-label">Breed:</span> ${data.breed}
+                                    </div>
+                                    ${data.tagId ? `<div class="fowl-meta-item"><span class="fowl-meta-label">Tag:</span> ${data.tagId}</div>` : ''}
+                                </div>
+                                <div class="fowl-actions">
+                                    <button class="btn-small btn-danger" onclick="deleteFowl('${doc.id}')">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('fowlGrid').innerHTML = fowlHtml;
+                
+            } catch (error) {
+                console.error('Error loading fowl data:', error);
+                showAlert('Failed to load fowl data', 'danger');
+            }
         }
         
         async function deleteFowl(fowlId) {
             if (confirm('Are you sure you want to delete this fowl?')) {
-                const fowlDoc = await db.collection('chickens').doc(fowlId).get();
-                const fowlData = fowlDoc.data();
-                
-                if (fowlData.photoUrl) {
-                    try {
-                        const photoRef = storage.refFromURL(fowlData.photoUrl);
-                        await photoRef.delete();
-                    } catch (err) {
-                        console.warn('Could not delete photo:', err);
-                    }
-                }
-                
+                // Simply delete the document - no need to delete from Storage since using Base64
                 await db.collection('chickens').doc(fowlId).delete();
                 showAlert('Fowl deleted successfully', 'success');
                 await loadFowlData();
@@ -3369,7 +3423,7 @@
                     breed: breeds[i],
                     age: Math.floor(8 + Math.random() * 20),
                     tagId: `TAG-${1000 + i}`,
-                    photoUrl: null,
+                    photoBase64: null, // No photo for demo data
                     registeredAt: new Date(now - i * 86400000)
                 });
             }
