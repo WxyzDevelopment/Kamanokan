@@ -1689,6 +1689,13 @@
                         <label for="loginPassword">Password</label>
                         <input type="password" id="loginPassword" placeholder="••••••••" required>
                     </div>
+                    
+                    <div style="text-align: right; margin-bottom: 20px;">
+                        <a href="#" onclick="showForgotPasswordPage()" style="color: var(--primary-brown); font-size: 14px; font-weight: 600; text-decoration: none; transition: color 0.2s;">
+                            Forgot Password?
+                        </a>
+                    </div>
+                    
                     <button type="submit" class="btn btn-primary" onclick="handleLogin()">
                         Sign In
                     </button>
@@ -1736,6 +1743,44 @@
                 <div class="auth-toggle">
                     Already have an account? <a href="#" onclick="showLogin()">Sign in</a>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Forgot Password Page (Separate Screen) -->
+    <div id="forgotPasswordScreen" class="auth-container hidden">
+        <div class="auth-card">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-brown), var(--medium-brown)); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; box-shadow: 0 10px 30px rgba(139, 69, 19, 0.3);">
+                    🔑
+                </div>
+                <h2 style="font-size: 28px; font-weight: 800; color: var(--gray-900); margin-bottom: 12px; letter-spacing: -0.5px;">Reset Your Password</h2>
+                <p style="font-size: 15px; color: var(--gray-600); line-height: 1.6;">
+                    Enter your email address and we'll send you a link to reset your password
+                </p>
+            </div>
+            
+            <form onsubmit="return false;">
+                <div class="form-group">
+                    <label for="resetEmail">Email Address</label>
+                    <input type="email" id="resetEmail" placeholder="your@email.com" required autofocus>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" onclick="handleForgotPassword()">
+                    Send Reset Link
+                </button>
+            </form>
+            
+            <div class="auth-toggle" style="margin-top: 28px;">
+                <a href="#" onclick="backToLogin()" style="color: var(--primary-brown); text-decoration: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>←</span> Back to Sign in
+                </a>
+            </div>
+            
+            <div style="margin-top: 32px; padding: 20px; background: var(--cream); border-radius: 12px; border-left: 4px solid var(--primary-brown);">
+                <p style="font-size: 13px; color: var(--gray-700); margin: 0; line-height: 1.6;">
+                    <strong>💡 Note:</strong> If you don't see the email in your inbox, please check your spam folder. The reset link will expire in 1 hour.
+                </p>
             </div>
         </div>
     </div>
@@ -1917,7 +1962,7 @@
                         <div class="section-header">
                             <h3 class="section-title">Feeding Schedule</h3>
                             <button class="btn btn-primary" onclick="manualFeed()">
-                                Manual Feed
+                                Feed Now
                             </button>
                         </div>
                         <div class="schedule-grid" id="feedingScheduleList">
@@ -2111,6 +2156,28 @@
                             Status: <strong id="notifPermStatus">Not enabled</strong>
                         </p>
                     </div>
+                    
+                    <div class="schedule-section">
+                        <div class="section-header">
+                            <h3 class="section-title">Simulation Mode</h3>
+                        </div>
+                        <p style="margin-bottom: 16px; color: var(--gray-700);">
+                            Enable simulation mode to generate test sensor data for demonstration
+                        </p>
+                        <div class="simulation-toggle" style="display: flex; align-items: center; gap: 12px;">
+                            <label class="switch">
+                                <input type="checkbox" id="simulationToggle" onchange="toggleSimulation()">
+                                <span class="slider"></span>
+                            </label>
+                            <span style="font-weight: 600; color: var(--gray-900);">Simulation Mode <span id="simStatus" style="color: var(--gray-600);">(Disabled)</span></span>
+                        </div>
+                        <button class="btn btn-secondary mt-24" onclick="seedDemoData()">
+                            Generate Sample Data
+                        </button>
+                        <p style="margin-top: 12px; font-size: 14px; color: var(--gray-600);">
+                            Populate the system with sample sensor readings and fowl records
+                        </p>
+                    </div>
                 </section>
             </div>
         </main>
@@ -2194,6 +2261,27 @@
             document.getElementById('signupForm').classList.remove('hidden');
         }
         
+        function showForgotPasswordPage() {
+            // Hide auth screen and show forgot password screen
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('forgotPasswordScreen').classList.remove('hidden');
+            
+            // Clear and focus the email field
+            document.getElementById('resetEmail').value = '';
+            setTimeout(() => {
+                document.getElementById('resetEmail').focus();
+            }, 100);
+        }
+        
+        function backToLogin() {
+            // Hide forgot password screen and show auth screen
+            document.getElementById('forgotPasswordScreen').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
+            
+            // Clear the reset email field
+            document.getElementById('resetEmail').value = '';
+        }
+        
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -2203,6 +2291,45 @@
                 showAlert('Login successful!', 'success');
             } catch (error) {
                 showAlert(error.message, 'danger');
+            }
+        }
+        
+        async function handleForgotPassword() {
+            const email = document.getElementById('resetEmail').value;
+            
+            if (!email) {
+                showAlert('Please enter your email address', 'warning');
+                return;
+            }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAlert('Please enter a valid email address', 'warning');
+                return;
+            }
+            
+            try {
+                await auth.sendPasswordResetEmail(email);
+                showAlert('Password reset email sent! Check your inbox.', 'success');
+                
+                // Clear the input and redirect back to login after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('resetEmail').value = '';
+                    backToLogin();
+                }, 3000);
+                
+            } catch (error) {
+                // Handle specific error cases
+                if (error.code === 'auth/user-not-found') {
+                    showAlert('No account found with this email address', 'danger');
+                } else if (error.code === 'auth/invalid-email') {
+                    showAlert('Invalid email address', 'danger');
+                } else if (error.code === 'auth/too-many-requests') {
+                    showAlert('Too many requests. Please try again later', 'warning');
+                } else {
+                    showAlert('Failed to send reset email: ' + error.message, 'danger');
+                }
             }
         }
         
@@ -2552,14 +2679,6 @@
                             <p>${schedule.amount}g of feed</p>
                         </div>
                     </div>
-                    <div class="schedule-controls">
-                        <label class="switch">
-                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} 
-                                   onchange="toggleSchedule('${schedule.id}', this.checked)">
-                            <span class="slider"></span>
-                        </label>
-                        <button class="btn-icon btn-edit" onclick="editSchedule('${schedule.id}', '${schedule.time}', ${schedule.amount})">✏️</button>
-                    </div>
                 </div>
             `).join('');
             
@@ -2610,34 +2729,6 @@
         }
         
         // Feeding Control
-        async function toggleSchedule(scheduleId, enabled) {
-            await db.collection('feedingSchedules').doc(scheduleId).update({
-                enabled: enabled
-            });
-            showAlert(`Schedule ${enabled ? 'enabled' : 'disabled'}`, 'info');
-        }
-        
-        function editSchedule(id, time, amount) {
-            document.getElementById('editScheduleId').value = id;
-            document.getElementById('editScheduleTime').value = time;
-            document.getElementById('editScheduleAmount').value = amount;
-            document.getElementById('scheduleModal').classList.add('active');
-        }
-        
-        async function saveScheduleEdit() {
-            const id = document.getElementById('editScheduleId').value;
-            const time = document.getElementById('editScheduleTime').value;
-            const amount = parseInt(document.getElementById('editScheduleAmount').value);
-            
-            await db.collection('feedingSchedules').doc(id).update({
-                time: time,
-                amount: amount
-            });
-            
-            closeModal('scheduleModal');
-            showAlert('Schedule updated successfully', 'success');
-        }
-        
         async function manualFeed() {
             const amount = 500;
             
@@ -2649,7 +2740,7 @@
             });
             
             await addNotification('Manual Feed', `Fed ${amount}g manually`, 'success');
-            showAlert(`Manual feed completed: ${amount}g`, 'success');
+            showAlert(`Feed completed: ${amount}g`, 'success');
         }
         
         function setupFeedingScheduler() {
